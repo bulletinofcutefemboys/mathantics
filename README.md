@@ -48,7 +48,7 @@ local function formatequation(polynomial)
 	for i,v in ipairs(polynomial)do
 		if v~=0 then
 			local x_term=i==4 and "x"or i==5 and ""or "x^"..tostring(5-i)
-			local plus_minus=i==1 and ""or v<0 and "-"or"+"
+			local plus_minus=v<0 and "-"or i==1 and ""or"+"
 			polynomial[i]=plus_minus..tostring(math.abs(v))..x_term
 		else
 			polynomial[i]=""

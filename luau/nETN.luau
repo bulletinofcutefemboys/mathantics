@@ -1,7 +1,6 @@
 --!optimize 2
 --!native
 
---DISCLAIMER THE CODE IS WIP AND NOT FINISHED 
 -- This Source Code Form is subject to the terms of the Mozilla Public
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://www.mozilla.org/en-US/MPL/2.0/
@@ -61,6 +60,7 @@ local ln:(v:number)->(number)=math.log
 local log10:(v:number)->(number)=math.log10
 local pow10:(v:number)->(number)=function(v)return 10^v end
 local floor:(v:number)->(number)=math.floor
+local abs:(v:number)->(number)=math.abs
 local LOG10_E = 0.4342944819032518
 local LN10 = 2.302585092994046
 local FLOAT_INT_LIMIT = 9007199254740992
@@ -74,10 +74,14 @@ local MIN_LUA_FLOAT=2.2250738585072014e-308
 local LOG10_MAX = 308.254715559916718   -- Above this, pow10 → INFINITY
 local LOG10_MIN = 307.652655568588755  -- Below this, pow10 → 0
 local DigitLimit=300
-local MIAMIS_NUMBER = -16.31680545889046562
-local LUMIS_NUMBER= -16.617835454554445
+
+local MIAMIS_NUMBER=-16.31680545889046562
+local LUMIS_NUMBER=-16.617835454554445
 local DADES_NUMBER=log10(DigitLimit)
-local msd = 17 --Orders of Magnitude difference between operations should nETN care
+local DRACULAURAS_NUMBER=-16.255619765854984
+local TWYLAS_NUMBER=-15.954589770191003
+local CLAWDEENS_NUMBER=4.8216373327664367e-17
+local CLEO_DENILES_NUMBER=-2.4108186663832186e-17
 local MAX_LAYER=2
 
 export type ETN = {Sign:boolean,Layer:number,Val1:number,Val2:number}
@@ -98,6 +102,7 @@ local MinusONE = nETN.RawNew(false,0,1)
 local NaN = nETN.RawNew(true,-1,1)
 local Inf = nETN.RawNew(true,-2,1)
 local MinusInf = nETN.RawNew(false,-2,1)
+local TEN,MinusTEN=nETN.RawNew(true,0,10,0),nETN.RawNew(false,0,10,0)
 
 local readonly=table.freeze
 readonly(ZERO)
@@ -106,6 +111,8 @@ readonly(MinusONE)
 readonly(NaN)
 readonly(Inf)
 readonly(MinusInf)
+readonly(TEN)
+readonly(MinusTEN)
 
 nETN.Zero=ZERO
 nETN.One=ONE
@@ -113,6 +120,8 @@ nETN.MinusOne=MinusONE
 nETN.NaN=NaN
 nETN.Inf=Inf
 nETN.MinusInf=MinusInf
+nETN.Ten=TEN
+nETN.MinusTen=MinusTEN
 
 --Checks if a FlexNum is NaN
 function nETN.IsNaN(Value:FlexNum):boolean
@@ -248,7 +257,7 @@ end
 function nETN.fromNumber(Value:number):ETN
 	if Value~=Value then return NaN end
 	if Value==0 then return ZERO end
-	local magnitude,sign=math.abs(Value),Value>=0
+	local magnitude,sign=abs(Value),Value>=0
 	if magnitude==INFINITY then return sign and Inf or MinusInf end
 	if NUMBERRANGE(magnitude) then
 		local logvalue=log10(magnitude)
@@ -314,7 +323,7 @@ function nETN.fromENString(Value:string):ETN
 	local slice=string.split(Value,";")
 	local Layers,Exp=tonumber(slice[1]),tonumber(slice[2])
 	if Layers==nil or Exp==nil then return NaN end 
-	return nETN.fromEN(Layers,math.abs(Layers),Exp)
+	return nETN.fromEN(Layers,abs(Layers),Exp)
 end
 
 --Converts an ETN to a string (in the form of nETN's S;L;V1;V2)
@@ -756,6 +765,13 @@ local function anubis(LOGBASE:number,Value:ETN):ETN
 		if not sign then R_CHECK=false result=-pow10Exp else
 			R_CHECK=InnerExp>=DigitLimit
 		end
+		if R_CHECK then
+			local flooredloggedlogbase=floor(logged_LOGBASE)
+			val1+=flooredloggedlogbase
+			val2+=logged_LOGBASE-flooredloggedlogbase
+		else
+			result=pow10Exp
+		end
 	elseif Layer==MAX_LAYER then
 		if not sign then return ZERO end
 		result=pow10(added)
@@ -849,9 +865,8 @@ end
 local MIN_ABSOLUTE_RANGE_SQRT=math.sqrt(MIN_ABSOLUTE_RANGE)
 local MAX_ABSOLUTE_RANGE_SQRT=math.sqrt(MAX_ABSOLUTE_RANGE)
 local Itas_Number,Ritas_Number=0.3010299956639812,0.47712125471966244
---Returns the square of an ETN
-function nETN.squared(Value:ValidInput):ETN
-	Value=nETN.convert(Value)
+
+local function fastsquare(Value:ETN):ETN
 	local Layer=Value.Layer
 	if Layer>=3 then return nETN.RawNew(true,Value.Layer,Value.Val1,Value.Val2) end
 	if Layer==-2 then return Inf end
@@ -895,6 +910,10 @@ function nETN.squared(Value:ValidInput):ETN
 		val2-=carry val1+=carry
 	end
 	return nETN.RawNew(true,1,val1,val2)
+end
+--Returns the square of an ETN
+function nETN.squared(Value:ValidInput):ETN
+	Value=nETN.convert(Value)return fastsquare(Value)
 end
 
 local MIN_ABSOLUTE_RANGE_CBRT=pow10(-DigitLimit/3)
@@ -968,7 +987,7 @@ local function computeACB(a:number,b:number,returnB:boolean):(number?)
 	local binomial=1 if a==b or b==0 then 
 		AChooseB[tostring(a).."_"..tostring(b)]=binomial
 		return returnB and binomial or nil
-	end local venusianNumber=a/2-math.abs(b-a/2)
+	end local venusianNumber=a/2-abs(b-a/2)
 	binomial=factorial(a,a-venusianNumber+1)/factorial(venusianNumber)
 	AChooseB[tostring(a).."_"..tostring(b)]=binomial
 	return returnB and binomial or nil
@@ -1011,9 +1030,15 @@ local function teleiopartA(Value:ETN,x:number):ETN
 	end
 	if Layer==0 then
 		local absoluterange,val1iszero=absolute_ranges(x),val1==0
-		if(val1iszero and log10(val2)<=absoluterange[1])or(log10(val1+val2)>=absoluterange[2])then
-			local added=x*log10(val1+val2)
-			if math.isinf(added)then return added<0 and ZERO or (sign and Inf or MinusInf) end
+		local log10val=log10(val1+val2)
+		if(val1iszero and log10(val2)<=absoluterange[1])or(log10val>=absoluterange[2])then
+			local added=x*log10val
+			if added==-INFINITY then return ZERO end
+			if added>=MAX_ABSOLUTE_RANGE then
+				local logspaceadded=log10(log10val)+log10(x)
+				local floored=floor(logspaceadded)
+				return nETN.RawNew(sign,2,floored,logspaceadded-floored)
+			end
 			local flooredlog=floor(added)
 			return nETN.RawNew(sign,1,flooredlog,added-flooredlog)
 		end
@@ -1069,7 +1094,7 @@ function nETN.powerInt(Value:ValidInput,x:number):ETN
 	if x==1 then return Value end
 	x=math.floor(x)
 	if math.isinf(x)then return x<0 and ZERO or Inf end
-	if x<0 then return recipfast(teleiopartA(Value,-x))end
+	if x<0 then return teleiopartA(recipfast(Value),-x)end
 	return teleiopartA(Value,x)
 end
 
@@ -1098,7 +1123,7 @@ function nETN.sqrt(Value:ValidInput):ETN
 	end
 	local added=val1+val2 if Layer==1 then
 		val1*=0.5 val2*=0.5 added*=0.5
-		if math.abs(added)<DigitLimit then
+		if abs(added)<DigitLimit then
 			return nETN.RawNew(true,0,pow10(added),0)
 		end
 		local floored=floor(val1)
@@ -1138,7 +1163,7 @@ function nETN.cbrt(Value:ValidInput):ETN
 	end
 	local added=val1+val2 if Layer==1 then
 		val1/=3 val2/=3 added/=3
-		if math.abs(added)<DigitLimit then
+		if abs(added)<DigitLimit then
 			return nETN.RawNew(sign,0,pow10(added),0)
 		end
 		local floored=floor(val1)
@@ -1148,7 +1173,7 @@ function nETN.cbrt(Value:ValidInput):ETN
 		end
 		return nETN.RawNew(sign,1,val1,val2)
 	end
-	local result=math.abs(added)^(1/3)
+	local result=abs(added)^(1/3)
 	local a=floor(result)
 	local b=result-a
 	return nETN.RawNew(sign,0,a,b)
@@ -1175,13 +1200,20 @@ local function teleiopartB(Value:ETN,x:number):ETN
 			val2+=added
 		end local inner=val1+val2
 		if inner<DigitLimit then
-			return nETN.RawNew(sign,1,pow10(inner),0)
+			local demoted=pow10(inner)
+			local floored=floor(demoted)
+			if demoted<DigitLimit then
+				demoted=pow10(demoted)
+				floored=floor(demoted)
+				return nETN.RawNew(sign,0,floored,demoted-floored)
+			end
+			return nETN.RawNew(sign,1,floored,demoted-floored)
 		end
 		return nETN.RawNew(sign,2,val1,val2)
 	end
 	local added=val1+val2 if Layer==1 then
 		val1/=x val2/=x added/=x
-		if math.abs(added)<DigitLimit then
+		if abs(added)<DigitLimit then
 			local K=pow10(added)
 			local floored=floor(K)
 			return nETN.RawNew(sign,0,floored,K-floored)
@@ -1193,7 +1225,7 @@ local function teleiopartB(Value:ETN,x:number):ETN
 		end
 		return nETN.RawNew(sign,1,val1,val2)
 	end
-	local result=math.abs(added)^(1/x)
+	local result=abs(added)^(1/x)
 	local a=floor(result)
 	local b=result-a
 	return nETN.RawNew(sign,0,a,b)
@@ -1222,10 +1254,15 @@ local function teleiopartC(Value:ETN,x:number):ETN
 	end
 	if Layer==0 then
 		local absoluterange,val1iszero=absolute_ranges(x),val1==0
-		if(val1iszero and log10(val2)<=absoluterange[1])or(log10(val1+val2)>=absoluterange[2])then
-			local added=x*log10(val1+val2)
-			--if added
-			if math.isinf(added)then return added<0 and ZERO or (sign and Inf or MinusInf) end
+		local log10val=log10(val1+val2)
+		if(val1iszero and log10(val2)<=absoluterange[1])or(log10val>=absoluterange[2])then
+			local added=x*log10val
+			if added==-INFINITY then return ZERO end
+			if added>=MAX_ABSOLUTE_RANGE then
+				local logspaceadded=log10(log10val)+log10(x)
+				local floored=floor(logspaceadded)
+				return nETN.RawNew(sign,2,floored,logspaceadded-floored)
+			end
 			local flooredlog=floor(added)
 			return nETN.RawNew(sign,1,flooredlog,added-flooredlog)
 		end
@@ -1247,6 +1284,165 @@ local function teleiopartC(Value:ETN,x:number):ETN
 	return nETN.RawNew(sign,1,val1,val2)
 end
 
+local function teleiopartB_L1(Value:ETN,L1:number):ETN
+	local Layer,sign=Value.Layer,Value.Sign
+	if Layer>=4 then return Value end
+	if Layer==-2 then return sign and Inf or MinusInf end
+	if Layer==-1 then return NaN end
+
+	if nETN.IsZero(Value)then return ZERO end
+
+	local val1,val2=Value.Val1,Value.Val2
+	if val1==1 and val2==0 then return sign and ONE or MinusONE end
+	if Layer==2 then
+		local flooredL1=floor(L1)
+		val2-=L1-flooredL1
+		val1-=flooredL1
+		if val2<0 then
+			local added=-floor(val2)
+			val1-=added
+			val2+=added
+		end
+		local inner=val1+val2
+		if inner<DigitLimit then
+			local demoted=pow10(inner)
+			local floored=floor(demoted)
+			if demoted<DigitLimit then
+				demoted=pow10(demoted)
+				floored=floor(demoted)
+				return nETN.RawNew(sign,0,floored,demoted-floored)
+			end
+			return nETN.RawNew(sign,1,floored,demoted-floored)
+		end
+		return nETN.RawNew(sign,2,val1,val2)
+	end
+	local added=val1+val2 if Layer==1 then
+		local ASIGN=added<0
+		local LOG_A=log10(abs(added))
+		added=pow10(LOG_A-L1) -- L1 is 300.908243580534098543
+		if added<DigitLimit then
+			if ASIGN then added=-added end
+			local K=pow10(added)
+			local floored=floor(K)
+			return nETN.RawNew(sign,0,floored,K-floored)
+		end
+		local Log_V1,Log_V2=log10(abs(val1)),log10(abs(val2))
+		local V1sign,V2sign=val1<0,val2<0
+		val1=pow10(Log_V1-L1)if V1sign then val1=-val1 end
+		val2=pow10(Log_V2-L1)if V2sign then val2=-val2 end
+		local floored=floor(val1)
+		val2+=val1-floored val1=floored
+		if val2>=1 or val2<0 then local carry=floor(val2)
+			val2-=carry val1+=carry
+		end
+		return nETN.RawNew(sign,1,val1,val2)
+	end
+	--[[if Layer==3 then
+		local differance=log10(L1)-added
+		if differance==0 then return sign and TEN or MinusTEN end
+		if differance>0 then return sign and ONE or MinusONE end
+		if differance<DRACULAURAS_NUMBER then return Value end
+		
+		--TAYLOR POLYNOMIAL
+		local X=added+log10(1-pow10(differance))
+		if X<DigitLimit then
+			X=pow10(X)
+			return nETN.RawNew(sign,2,X,0)
+		end
+		local flooredX=floor(X)
+		return nETN.RawNew(sign,3,flooredX,X-flooredX)
+	end]]
+	return sign and ONE or MinusONE
+end
+
+local function teleiopartC_L1(Value:ETN,L1:number):ETN
+	local Layer,sign=Value.Layer,Value.Sign
+	if Layer>=4 then return Value end
+	if Layer==-2 then return sign and Inf or MinusInf end
+	if Layer==-1 then return NaN end
+
+	if nETN.IsZero(Value)then return ZERO end
+	
+	local val1,val2=Value.Val1,Value.Val2
+	if val1==1 and val2==0 then return sign and ONE or MinusONE end
+	if Layer==2 then
+		local flooredL1=floor(L1)
+		val2+=L1-flooredL1
+		val1+=flooredL1
+		if val2>=1 then
+			local added=floor(val2)
+			val1+=added
+			val2-=added
+		end
+		local inner=val1+val2
+		if inner==INFINITY then return sign and Inf or MinusInf end
+		--[[if inner>=MAX_ABSOLUTE_RANGE then
+			local promoted=log10(inner)
+			local floored=floor(promoted)
+			return nETN.RawNew(sign,3,floored,promoted-floored)
+		end]]
+		return nETN.RawNew(sign,2,val1,val2)
+	end
+	local added=val1+val2 if Layer==1 then
+		local ASIGN=added<0
+		local LOG_A=log10(abs(added)) -- 2.4 to 300
+		added=LOG_A+L1 -- x+300
+		if ASIGN then
+			if added==INFINITY then return ZERO end
+			added=-added
+			local K=pow10(added)
+			local floored=floor(K)
+			return nETN.RawNew(sign,1,floored,K-floored)
+		end
+		
+		if added>LOG10_MAX then return sign and Inf or MinusInf end
+		--[[if added>=DigitLimit then
+			local floored=floor(added)
+			return nETN.RawNew(sign,3,floored,added-floored)
+		end]]
+		local Log_V1,Log_V2=log10(val1),log10(val2)
+		val1=pow10(Log_V1+L1)
+		val2=pow10(Log_V2+L1)
+		
+		local floored=floor(val1)
+		val2+=val1-floored val1=floored
+		if val2>=1 or val2<0 then local carry=floor(val2)
+			val2-=carry val1+=carry
+		end
+		return nETN.RawNew(sign,2,val1,val2)
+	end
+	if Layer==0 then
+		local val1iszero=val1==0
+		local log10val=log10(val1+val2)
+		
+		local added=pow10(L1)*log10val
+		if added==-INFINITY then return ZERO end
+		if added>=MAX_ABSOLUTE_RANGE then
+			local logspaceadded=log10(log10val)+L1
+			local floored=floor(logspaceadded)
+			return nETN.RawNew(sign,2,floored,logspaceadded-floored)
+		end
+		local flooredlog=floor(added)
+		return nETN.RawNew(sign,1,flooredlog,added-flooredlog)
+	end
+	--REMODIFY
+	--[[if Layer==3 then
+		local differance=log10(L1)-added
+		if differance==0 then return sign and TEN or MinusTEN end
+		if differance>0 then return sign and ONE or MinusONE end
+		if differance<DRACULAURAS_NUMBER then return Value end
+		
+		--TAYLOR POLYNOMIAL
+		local X=added+log10(1-pow10(differance))
+		if X<DigitLimit then
+			X=pow10(X)
+			return nETN.RawNew(sign,2,X,0)
+		end
+		local flooredX=floor(X)
+		return nETN.RawNew(sign,3,flooredX,X-flooredX)
+	end]]
+end
+
 --Returns the x^(1/n) of an ETN
 function nETN.root(Value:ValidInput,n:number):ETN
 	if type(n)~="number"then n=nETN.toNumber(n)end
@@ -1255,8 +1451,8 @@ function nETN.root(Value:ValidInput,n:number):ETN
 	Value=nETN.convert(Value)
 	if n==1 then return Value end
 	if n<0 then 
-		if n>-1 then return recipfast(teleiopartC(Value,-1/n))end
-		return recipfast(teleiopartB(Value,-n))
+		if n>-1 then return teleiopartC(recipfast(Value),-1/n)end
+		return teleiopartB(recipfast(Value),-n)
 	end
 	if n<1 then return teleiopartC(Value,1/n)end
 	return teleiopartB(Value,n)
@@ -1265,20 +1461,22 @@ end
 local function fastpower(Value:ETN,x:number):ETN
 	if x==1 then return Value end
 	if x<0 then x=-x
-		if x<1 then return recipfast(teleiopartB(Value,1/x))end
-		return recipfast(teleiopartC(Value,x))
+		if x<1 then return teleiopartB(recipfast(Value),1/x)end
+		return teleiopartC(recipfast(Value),x)
 	else
 		if x<1 then return teleiopartB(Value,1/x)end
 		return teleiopartC(Value,x)
 	end
 end
 
---FIX Teleios add in cases
 local function fastpowerY(Value:ETN,L1:ETN):ETN
 	local MAGNITUDE=Value.Val1+Value.Val2
-	local resultSign=MAGNITUDE>=0 if not L1.Sign then
-		if not resultSign then return recipfast(teleiopartB_L1(Value,-MAGNITUDE))end
-		return recipfast(teleiopartC_L1(Value,MAGNITUDE))
+	local layer=Value.Layer
+	local resultSign=MAGNITUDE>=0 
+	if not resultSign and not Value.Sign then return NaN end
+	if not L1.Sign then
+		if not resultSign then return teleiopartB_L1(recipfast(Value),-MAGNITUDE)end
+		return teleiopartC_L1(recipfast(Value),MAGNITUDE)
 	else
 		if not resultSign then return teleiopartB_L1(Value,-MAGNITUDE)end
 		return teleiopartC_L1(Value,MAGNITUDE)
@@ -1292,47 +1490,405 @@ function nETN.power(Value:ValidInput,x:number):ETN
 	return fastpower(Value,x)
 end
 
---L2 SUPPORT ENDS (UNDER CONSTRUCTION)
-
 -- Returns the x^y of both ETNs (Optimized)
 function nETN.pow(x:ValidInput,y:ValidInput):ETN
 	x=nETN.convert(x)y=nETN.convert(y)
 	local xsign,ysign=x.Sign,y.Sign
-	if x.Layer==0 then
+	local xlayer,ylayer=x.Layer,y.Layer
+	if xlayer==-1 or ylayer==-1 then return NaN end
+	if xlayer==0 then
 		local A=(x.Val1+x.Val2)*(xsign and 1 or -1)
 		if A==1 then return ONE end
 		return fastpowX(A,y)
 	end
-	if x.Layer==1 then return fastpowY(x,y)end
-	if y.Layer==0 then
+	if xlayer==1 then return fastpowY(x,y)end
+	if ylayer==0 then
 		local A=(y.Val1+y.Val2)*(ysign and 1 or -1)
 		if A==0 then return ONE end
 		if A==-1 then return recipfast(x)end
 		return fastpower(x,A)
 	end
-	if y.Layer==1 then return fastpowerY(x,y)end
+	if ylayer==1 then return fastpowerY(x,y)end
 	if not xsign and not nETN.IsInteger(y) then return NaN end
 	
+	if not ysign then return ZERO end
+	if ylayer==-2 or xlayer==-2 then return Inf end
 	local v1,v2=(x.Val1+x.Val2),(y.Val1+y.Val2)
-	if v2>LOG10_MAX then 
-		if v1>0 then
-			return ysign and Inf or ZERO
-		end return ysign and ZERO or Inf
+	local thesign=xsign or bit32.band(math.floor(FLOAT_INT_LIMIT*y.Val2),1)==0
+	local loggedv1=log10(v1) local differance=v2-loggedv1
+
+	--[[if differance<TWYLAS_NUMBER then
+		local floored=floor(v1)
+		return nETN.RawNew(thesign,2,floored,v1-floored)
+		local floored=floor(loggedv1)
+		return nETN.RawNew(thesign,3,floored,loggedv1-floored)
+	end]]
+	if differance>-TWYLAS_NUMBER then
+		local pow10=pow10(v2)
+		if pow10==INFINITY then return Inf end
+		return nETN.RawNew(thesign,2,pow10,0)
 	end
+	local X=pow10(loggedv1+log10(1+pow10(differance)))
+	if X==INFINITY then return Inf end
+	return nETN.RawNew(thesign,2,X,0)
+	--local flooredX=floor(X)
+	--return nETN.RawNew(thesign,3,flooredX,X-flooredX)
+end
+
+local function mul2(Value:ETN):ETN
+	local sign,layer=Value.Sign,Value.Layer
+	if layer>=2 then return Value end
+	local v1,v2=Value.Val1,Value.Val2
+	if layer==1 then
+		v2+=Itas_Number
+		local added=v1+v2
+		if added<0 and added>-DigitLimit then
+			return nETN.RawNew(sign,0,0,pow10(added))
+		end
+		if v2>=1 then
+			v1+=1
+			v2-=1
+		end
+		return nETN.RawNew(sign,1,v1,v2)
+	end
+	v1*=2
+	if v1>=MAX_ABSOLUTE_RANGE then
+		local logv1=log10(v1)
+		local floored=floor(logv1)
+		return nETN.RawNew(sign,1,floored,logv1-floored)
+	end
+	v2*=2
+	if v2>=1 then
+		v1+=1
+		v2-=1
+	end
+	return nETN.RawNew(sign,0,v1,v2)
+end
+
+local function fastadd(a:ETN,b:ETN):ETN
+	if nETN.IsZero(a)then return b end
+	if nETN.IsZero(b)then return a end
 	
-	local yLinear=pow10(v2)
-	if not ysign then yLinear=-yLinear end
-	local exponent=v1*yLinear
-	if math.isinf(exponent)then return exponent<0 and ZERO or Inf end
-	if exponent==0 then return ONE end local expSign=exponent>=0
-	exponent=math.abs(exponent)local flooredexponent=floor(exponent)
-	local magnitude if exponent==flooredexponent then
-		magnitude=nETN.pow10(nETN.RawNew(expSign,0,exponent,0))
-	else magnitude=nETN.pow10(nETN.RawNew(expSign,0,flooredexponent,exponent-flooredexponent))end
+	local asign,bsign=a.Sign,b.Sign local thesign=asign==bsign
+	if not thesign and not asign then
+		a,b=b,a asign,bsign=bsign,asign
+	end
+	local alayer,blayer=a.Layer,b.Layer
+	local av1,av2,bv1,bv2=a.Val1,a.Val2,b.Val1,b.Val2
 	
-	if not xsign and bit32.band(math.floor(FLOAT_INT_LIMIT*y.Val2),1)==1 then
-		return nETN.RawNew(false,magnitude.Layer,magnitude.Val1,magnitude.Val2)
-	end return magnitude
+	if alayer==-1 or blayer==-1 then return NaN end
+	local ainf,binf=alayer==-2,blayer==-2
+	if ainf and binf then
+		if thesign then return a end return ZERO
+	end
+	if ainf then return a end if binf then return b end
+	if nETN.cmpAbs(a,b)==0 then
+		if asign==bsign then return mul2(a)end return ZERO
+	end
+	if alayer==blayer then
+		if alayer==0 then
+			if thesign then
+				local pa=av1+bv1
+				if pa>=MAX_ABSOLUTE_RANGE then
+					local loggedpa=log10(pa)
+					local floored=floor(loggedpa)
+					return nETN.RawNew(asign,1,floored,loggedpa-floored)
+				end
+				local pb=av2+bv2 if pb>=1 then
+					pa+=1
+					pb-=1
+				end
+				return nETN.RawNew(asign,0,pa,pb)
+			end
+			local pb=av2-bv2 local rs2=pb>=0
+			if not rs2 then pb=-pb end
+			if av1==bv1 then
+				if pb<=MIN_ABSOLUTE_RANGE then
+					local loggedpb=log10(pb)
+					local floored=floor(loggedpb)
+					return nETN.RawNew(rs2,1,floored,loggedpb-floored)
+				end
+				return nETN.RawNew(rs2,0,0,pb)
+			end
+			local pa=av1-bv1 local rs=pa>=0
+			if not rs then pa=-pa end
+			if rs2~=rs then
+				pb=1-pb
+				pa-=1
+			end
+			return nETN.RawNew(rs,0,pa,pb)
+		elseif alayer==1 then
+			local statement,difference=av1==bv1,nil
+			if statement then difference=bv2-av2 else
+				difference=(bv1-av1)+(bv2-av2)
+				if difference>-TWYLAS_NUMBER then return b end
+				if thesign then
+					if difference<TWYLAS_NUMBER then return a end
+				else
+					if difference<DRACULAURAS_NUMBER then return a end
+				end
+			end
+			local M,bob=thesign and 1 or -1,nil
+			if difference<CLAWDEENS_NUMBER and difference>CLEO_DENILES_NUMBER then
+				bob=thesign and 2 or -LN10*difference
+			else bob=1+M*pow10(difference)end
+			local bobsign=bob>=0
+			if not bobsign and not thesign then bob=-bob end
+			local logterm=log10(bob)
+			local flooredlog=floor(logterm)
+			local remainder=logterm-flooredlog
+			local pa,pb=av1+flooredlog,av2+remainder
+			local added=pa+pb
+			if thesign then
+				if added<0 and added>-DigitLimit then
+					return nETN.RawNew(asign,0,0,pow10(added))
+				end
+			else
+				if abs(added)<DigitLimit then
+					local pow=pow10(added)
+					local floored=floor(pow)
+					return nETN.RawNew(bobsign,0,floored,pow-floored)
+				end
+			end
+			if pb>=1 then
+				pa+=1
+				pb-=1
+			end
+			local Multi if thesign then Multi=asign else Multi=bobsign end
+			return nETN.RawNew(Multi,1,pa,pb)
+		else
+			if av1~=bv1 then if av1>bv1 then return a end return b end
+			
+		end
+	end
+	if alayer>blayer then 
+		a,b=b,a
+		alayer,blayer=blayer,alayer
+		av1,av2,bv1,bv2=bv1,bv2,av1,av2
+	end
+	if alayer==0 then
+		if blayer==1 then
+			
+		else return b end
+	elseif alayer==1 then
+		if blayer==2 then
+			
+		else return b end
+	end
+end
+--Adds two ETNs together like a+b
+function nETN.add(a:ValidInput,b:ValidInput):ETN
+	a=nETN.convert(a)b=nETN.convert(b)
+	return fastadd(a,b)
+end
+
+--Subtracts two ETNs like a-b
+function nETN.sub(a:ValidInput,b:ValidInput):ETN
+	a=nETN.convert(a)b=nETN.convert(b)
+	return fastadd(a,nETN.RawNew(not b.Sign,b.Layer,b.Val1,b.Val2))
+end
+
+--Multiplies two ETNs together like a*b
+--for L2 AND ABOVE USE nETN.div() taking the reciprocal of an L2 will yield 0, we plan to add L2+ tiny numbers in 2.XXX+ RR.
+function nETN.mul(a:ValidInput,b:ValidInput):ETN
+	a=nETN.convert(a)b=nETN.convert(b)
+	if nETN.IsZero(a)then return ZERO end
+	if nETN.IsZero(b)then return ZERO end
+	
+	local alayer,blayer=a.Layer,b.Layer
+	local av1,av2,bv1,bv2=a.Val1,a.Val2,b.Val1,b.Val2
+	local thesign=a.Sign==b.Sign
+	
+	if alayer==-1 or blayer==-1 then return NaN end
+	if alayer==-2 or blayer==-2 then return thesign and Inf or MinusInf end
+	if av1==1 and av2==0 then
+		return nETN.RawNew(thesign,b.Layer,b.Val1,b.Val2)
+	end
+	if bv1==1 and bv2==0 then
+		return nETN.RawNew(thesign,a.Layer,a.Val1,a.Val2)
+	end
+	if nETN.cmp(a,b)==0 then return fastsquare(a)end
+	if alayer==blayer then
+		if alayer==0 then
+			local logspace=log10(av1+av2)+log10(bv1+bv2)
+			if abs(logspace)>=DigitLimit then
+				local floored=floor(logspace)
+				return nETN.RawNew(thesign,1,floored,logspace-floored)
+			end
+			if av1==0 and bv1==0 then return nETN.RawNew(thesign,0,0,av2*bv2) end
+			if av2==0 and bv2==0 then return nETN.RawNew(thesign,0,av1*bv1,0) end
+			local pa,pb=av1*bv1,av2*bv2
+			local b11,b12=av1*bv2,av2*bv1
+			if b11~=0 then
+				if b11<=FLOAT_HALF_INT_LIMIT then
+					local floored=floor(b11)
+					pb+=b11-floored
+					pa+=floored
+				else pa+=b11 end
+			end
+			if b12~=0 then
+				if b12<=FLOAT_HALF_INT_LIMIT then
+					local floored=floor(b12)
+					pb+=b12-floored
+					pa+=floored
+				else pa+=b12 end
+			end
+			if pb>=1 then
+				local flooredval2=floor(pb)
+				pb-=flooredval2 pa+=flooredval2
+			end
+			return nETN.RawNew(thesign,0,pa,pb)
+		elseif alayer==1 then
+			local pa=av1+bv1
+			if pa>=MAX_ABSOLUTE_RANGE then
+				local loggedpa=log10(pa)
+				local floored=floor(loggedpa)
+				return nETN.RawNew(thesign,2,floored,loggedpa-floored)
+			elseif pa==-INFINITY then return ZERO end
+			local pb=av2+bv2 local added=pa+pb
+			local addedsign=added>=0
+			if addedsign and added<DigitLimit then
+				local powed=pow10(added)
+				local floored=floor(powed)
+				return nETN.RawNew(thesign,0,floored,powed-floored)
+			end
+			if not addedsign and added>-DigitLimit then
+				local powed=pow10(added)
+				return nETN.RawNew(thesign,0,0,powed)
+			end
+			if pb>=1 then
+				pb-=1
+				pa+=1
+			end --WHAT U DO X3  WHAT U DO X3  WHAT U DO 2 ME X3 
+			return nETN.RawNew(thesign,1,pa,pb)
+		elseif alayer==2 then
+			local av,bv=av1+av2,bv1+bv2
+			local difference=bv-av
+			if difference<TWYLAS_NUMBER then
+				return nETN.RawNew(thesign,2,av1,av2)
+			end
+			if difference>-TWYLAS_NUMBER then
+				return nETN.RawNew(thesign,2,bv1,bv2)
+			end
+			local factor=log10(1+pow10(difference))
+			local flooredfactor=floor(factor)
+			local remainder=factor-flooredfactor
+			local pa,pb=av1+flooredfactor,av2+remainder
+			if pb>=1 then
+				pb-=1
+				pa+=1
+			end
+			return nETN.RawNew(thesign,2,pa,pb)
+		end
+	end
+	if alayer>blayer then 
+		a,b=b,a
+		alayer,blayer=blayer,alayer
+		av1,av2,bv1,bv2=bv1,bv2,av1,av2
+	end
+	if alayer==0 then
+		if blayer==1 then
+			local logA=log10(av1+av2)
+			if abs(logA+bv1+bv2)<DigitLimit then
+				local powBv=pow10(bv1+bv2)
+				local b1,b2=powBv,0
+				if powBv<=FLOAT_HALF_INT_LIMIT then
+					local floored=floor(powBv)
+					b1=floored b2=powBv-floored
+				end
+				if av1==0 and b1==0 then return nETN.RawNew(thesign,0,0,av2*b2) end
+				if av2==0 and b2==0 then return nETN.RawNew(thesign,0,av1*b1,0) end
+				local pa,pb=av1*b1,av2*b2
+				local b11,b12=av1*b2,av2*b1
+				if b11~=0 then
+					if b11<=FLOAT_HALF_INT_LIMIT then
+						local floored=floor(b11)
+						pb+=b11-floored
+						pa+=floored
+					else pa+=b11 end
+				end
+				if b12~=0 then 
+					if b12<=FLOAT_HALF_INT_LIMIT then
+						local floored=floor(b12)
+						pb+=b12-floored
+						pa+=floored
+					else pa+=b12 end
+				end
+				if pb>=1 then
+					local flooredval2=floor(pb)
+					pb-=flooredval2 pa+=flooredval2
+				end
+				return nETN.RawNew(thesign,0,pa,pb)
+			end
+			local floored=floor(logA)
+			local remainder=logA-floored
+			local pa,pb=bv1+floored,bv2+remainder
+			if pb>=1 then
+				pb-=1
+				pa+=1
+			end
+			return nETN.RawNew(thesign,1,pa,pb)
+		elseif blayer==2 then
+			--Accuracy will be added in future updates
+			return nETN.RawNew(thesign,blayer,bv1,bv2)
+		end
+		-- add future L0*anything handler
+	elseif alayer==1 then
+		if blayer==2 then
+			local bv=bv1+bv2
+			local powBv=pow10(bv1+bv2)
+			local preval=powBv+av1
+			if preval<MAX_ABSOLUTE_RANGE then
+				local pav=preval+av2 if abs(pav)<300 then
+					local powPav=pow10(pav)
+					local floored=floor(powPav)
+					return nETN.RawNew(thesign,0,floored,powPav-floored)
+				end
+				if preval<=FLOAT_HALF_INT_LIMIT then
+					local floored=floor(preval)
+					av2+=preval-floored
+					preval=floored
+					if av2>= 1 then
+						av1-=1
+						preval+=1
+					end
+				end
+				return nETN.RawNew(thesign,1,preval,av2)
+			end
+			-- we use gir's method with Twyla cutoffs
+			--step 1 calculate girs number and Sign (S)
+			local av=av1+av2
+			local SIGNS=av<0
+			local S=SIGNS and -1 or 1
+			local gir=log10(S*av)
+			--step 2 calculate the Girian Difference (B1+B2-Gir)
+			local Girian_Difference=bv-gir
+			--step 3 use the Twyla's number discovered in monster high to see if we need return early :3
+			if Girian_Difference>-TWYLAS_NUMBER then
+				return nETN.RawNew(thesign,2,bv1,bv2)
+			end local bob
+			if Girian_Difference<CLAWDEENS_NUMBER and Girian_Difference>CLEO_DENILES_NUMBER then
+				bob=1+S+LN10*Girian_Difference
+				if bob==0 then
+					local mantissa=pow10(av2)
+					local floored=floor(mantissa)
+					return nETN.RawNew(thesign,0,floored,mantissa-floored)
+				end
+			else bob=S+pow10(Girian_Difference)end
+			--step 4 after that check we apply Gir's Method
+			local Result=gir+log10(bob)
+			--step 5 we split the result
+			local floored=floor(Result)
+			return nETN.RawNew(thesign,2,floored,Result-floored)
+		end
+		-- add future L1*anything handler
+	end
+end
+
+--Divides two ETNs together like a/b
+function nETN.div(a:ValidInput,b:ValidInput):ETN
+	a=nETN.convert(a)b=nETN.convert(b)
+	
 end
 
 return nETN
